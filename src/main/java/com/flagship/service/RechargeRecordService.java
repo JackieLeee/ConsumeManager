@@ -1,7 +1,7 @@
 package com.flagship.service;
 
-import com.flagship.MainView;
 import com.flagship.common.Constant;
+import com.flagship.exception.ExceptionEnum;
 import com.flagship.pojo.RechargeRecord;
 import com.flagship.pojo.User;
 import com.flagship.util.DateUtils;
@@ -16,15 +16,28 @@ import java.util.Objects;
 /**
  * @Author Flagship
  * @Date 2021/7/1 9:10
- * @Description
+ * @Description 充值记录Service
  */
-public class RechargeRecordService {
+public class RechargeRecordService extends BaseService {
+    /**
+     * 充值记录列表
+     */
     private final List<RechargeRecord> rechargeRecords = new ArrayList<>();
+    /**
+     * 自增ID
+     */
     private Integer nextId = 1;
+    /**
+     * 数据文件
+     */
     private File file;
 
-    public void initRecords(boolean onlyCurrentUser) {
-        User user = MainView.currentUser;
+    /**
+     * 初始化
+     */
+    @Override
+    public void initData() {
+        User user = UserService.currentUser;
         if (user == null) {
             return;
         }
@@ -37,21 +50,32 @@ public class RechargeRecordService {
                 //实现ID自增
                 ++nextId;
                 //解析充值数据并加入到集合中
-                String[] dataArr = reader.readLine().split("#");
+                String[] dataArr = reader.readLine().split(Constant.DELIMITER);
                 RechargeRecord record = resolveStringArr(dataArr);
-                //是否只保存当前用户的充值记录
-                if (onlyCurrentUser) {
-                    if (user.getRole().equals(1) || !user.getId().equals(record.getUserId())) {
-                        continue;
-                    }
+                //如果是当前用户不是管理员，则只能获取自己的充值记录
+                if (user.getRole().equals(0) && !user.getId().equals(record.getUserId())) {
+                    continue;
                 }
+                //加入列表
                 rechargeRecords.add(record);
             }
         } catch (IOException e) {
-            ExceptionUtils.recordException("充值数据初始化异常");
+            ExceptionUtils.recordException(ExceptionEnum.INIT_RECHARGE_RECORD_ERR.getErrMsg());
         }
     }
 
+    /**
+     * 清空列表
+     */
+    @Override
+    public void clear() {
+        this.rechargeRecords.clear();
+    }
+
+
+    /**
+     * 从字符串数组中解析出充值记录数据
+     */
     private RechargeRecord resolveStringArr(String[] dataArr) {
         RechargeRecord rechargeRecord = new RechargeRecord();
         rechargeRecord.setRecordId(Integer.valueOf(dataArr[0]));
@@ -61,8 +85,11 @@ public class RechargeRecordService {
         return rechargeRecord;
     }
 
-    public boolean addRecord(BigDecimal money) {
-        User user = MainView.currentUser;
+    /**
+     * 添加一条充值记录
+     */
+    public void addRecord(BigDecimal money) {
+        User user = UserService.currentUser;
         //用户需要登录且金额为正整数
         if (user != null && money.compareTo(BigDecimal.ZERO) > 0) {
             RechargeRecord rechargeRecord = new RechargeRecord();
@@ -70,28 +97,35 @@ public class RechargeRecordService {
             rechargeRecord.setUserId(user.getId());
             rechargeRecord.setMoney(money);
             rechargeRecord.setDate(DateUtils.getCurrentDateString());
-            //写入数据文件
+            //数据流
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
+                //写入数据文件
                 writer.write(resolveRecharge(rechargeRecord));
                 writer.newLine();
                 writer.flush();
                 //id自增
                 ++nextId;
+                //加入列表
                 rechargeRecords.add(rechargeRecord);
             } catch (Exception e) {
-                ExceptionUtils.recordException("新增充值数据保存异常");
+                ExceptionUtils.recordException(ExceptionEnum.ADD_RECHARGE_RECORD_ERR.getErrMsg());
             }
         }
-        return false;
     }
 
+    /**
+     * 从充值记录对象构造出字符串
+     */
     private String resolveRecharge(RechargeRecord rechargeRecord) {
-        return rechargeRecord.getRecordId() + "#" +
-                rechargeRecord.getUserId() + "#" +
-                rechargeRecord.getMoney() + "#" +
+        return rechargeRecord.getRecordId() + Constant.DELIMITER +
+                rechargeRecord.getUserId() + Constant.DELIMITER +
+                rechargeRecord.getMoney() + Constant.DELIMITER +
                 rechargeRecord.getDate();
     }
 
+    /**
+     * 获取充值数据列表
+     */
     public List<RechargeRecord> getRechargeRecords() {
         return rechargeRecords;
     }

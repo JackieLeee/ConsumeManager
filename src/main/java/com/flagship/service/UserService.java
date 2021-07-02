@@ -1,7 +1,7 @@
 package com.flagship.service;
 
-import com.flagship.MainView;
 import com.flagship.common.Constant;
+import com.flagship.exception.ExceptionEnum;
 import com.flagship.pojo.User;
 import com.flagship.util.ExceptionUtils;
 
@@ -14,17 +14,31 @@ import java.util.Objects;
 /**
  * @Author Flagship
  * @Date 2021/7/1 9:09
- * @Description
+ * @Description 用户Service类
  */
-public class UserService {
+public class UserService extends BaseService {
+    /**
+     * 当前用户
+     */
+    public static User currentUser;
+    /**
+     * 用户列表
+     */
     private final List<User> userList = new ArrayList<>();
+    /**
+     * 自增id
+     */
     private Integer nextId = 1;
+    /**
+     * 数据文件
+     */
     private File file;
 
     /**
-     * 初始化用户数据
+     * 初始化数据
      */
-    public void initUserList() {
+    @Override
+    public void initData() {
         //获取文件路径
         String filePath = Objects.requireNonNull(UserService.class.getClassLoader().getResource(Constant.FilePath.USER_DB)).getPath();
         file = new File(filePath);
@@ -34,13 +48,22 @@ public class UserService {
                 //实现ID自增
                 ++nextId;
                 //解析用户数据并加入到集合中
-                String[] dataArr = reader.readLine().split("#");
+                String[] dataArr = reader.readLine().split(Constant.DELIMITER);
                 User user = resolveStringArr(dataArr);
+                //加入列表
                 userList.add(user);
             }
         } catch (IOException e) {
-            ExceptionUtils.recordException("用户数据初始化异常");
+            ExceptionUtils.recordException(ExceptionEnum.INIT_USER_ERR.getErrMsg());
         }
+    }
+
+    /**
+     * 清空用户列表
+     */
+    @Override
+    public void clear() {
+        this.userList.clear();
     }
 
     /**
@@ -58,14 +81,14 @@ public class UserService {
     }
 
     /**
-     * 从字符串数组中解析出用户数据
+     * 从用户对象构造出字符串
      */
     private String resolveUser(User user) {
-        return user.getId() + "#" +
-                user.getUserName() + "#" +
-                user.getPassword() + "#" +
-                user.getRole() + "#" +
-                user.getStatus() + "#" +
+        return user.getId() + Constant.DELIMITER +
+                user.getUserName() + Constant.DELIMITER +
+                user.getPassword() + Constant.DELIMITER +
+                user.getRole() + Constant.DELIMITER +
+                user.getStatus() + Constant.DELIMITER +
                 user.getAccount();
     }
 
@@ -84,7 +107,7 @@ public class UserService {
     /**
      * 通过id找到用户
      */
-    private User findUserByUserId(Integer userId) {
+    public User findUserByUserId(Integer userId) {
         for (User user : userList) {
             if (user.getId().equals(userId)) {
                 return user;
@@ -94,19 +117,22 @@ public class UserService {
     }
 
     /**
-     * 登录
+     * 根据用户身份进行登录
      */
     private boolean login(String userName, String password, Integer role) {
         User user = findUserByUserName(userName);
-        if (user != null && user.getStatus().equals(Constant.UserStatus.ACTIVE) && user.getRole().equals(role) && user.getPassword().equals(password)) {
-            MainView.currentUser = user;
+        if (user != null
+                && user.getStatus().equals(Constant.UserStatus.ACTIVE)
+                && user.getRole().equals(role)
+                && user.getPassword().equals(password)) {
+            UserService.currentUser = user;
             return true;
         }
         return false;
     }
 
     /**
-     * 管路员登录
+     * 管理员登录
      */
     public boolean adminLogin(String userName, String password) {
         return login(userName, password,  Constant.UserRole.ADMIN);
@@ -135,35 +161,40 @@ public class UserService {
         user.setRole(Constant.UserRole.USER);
         user.setStatus(Constant.UserStatus.ACTIVE);
         user.setAccount(BigDecimal.ZERO);
-        //写入数据
+        //输出流
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
+            //写入数据
             writer.write(resolveUser(user));
             writer.newLine();
             writer.flush();
             //id自增
             ++nextId;
+            //加入列表
             userList.add(user);
         } catch (IOException e) {
-            ExceptionUtils.recordException("注册用户数据保存异常");
+            ExceptionUtils.recordException(ExceptionEnum.ADD_USER_ERR.getErrMsg());
         }
         return true;
     }
 
     /**
-     * 更新用户
+     * 更新用户数据
      */
     private boolean updateUser(User newUser) {
         User oldUser = findUserByUserId(newUser.getId());
         if (oldUser != null) {
             String oldStr = resolveUser(oldUser);
             String newStr = resolveUser(newUser);
+            //输出流
             try(BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                 //构造数据
                 StringBuilder stringBuilder = new StringBuilder();
                 for (User user : userList) {
                     stringBuilder.append(resolveUser(user)).append("\n");
                 }
+                //替换字符串内容
                 String content = stringBuilder.toString().replaceAll(oldStr, newStr);
+                //写入数据
                 writer.write(content);
                 writer.flush();
                 return true;
@@ -178,6 +209,7 @@ public class UserService {
      * 更新用户名
      */
     public boolean updateUserName(Integer userId, String userName) {
+        //先找到用户，然后判断是否重名
         User user = findUserByUserId(userId);
         User anotherUser = findUserByUserName(userName);
         if (user != null && anotherUser == null) {
@@ -188,27 +220,13 @@ public class UserService {
     }
 
     /**
-     * 更新用户名
+     * 更新当前用户密码
      */
     public boolean updatePassword(String password) {
-        User user = MainView.currentUser;
+        User user = UserService.currentUser;
         if (user != null) {
             user.setPassword(password);
             return updateUser(user);
-        }
-        return false;
-    }
-
-    /**
-     * 更新余额
-     */
-    private boolean updateAccount(Integer userId, BigDecimal account) {
-        User user = findUserByUserId(userId);
-        if (user != null) {
-            user.setAccount(account);
-            if (updateUser(user)) {
-                return true;
-            }
         }
         return false;
     }
@@ -218,6 +236,7 @@ public class UserService {
      */
     public boolean freezeUser(Integer userId) {
         User user = findUserByUserId(userId);
+        //判断当前用户身份是否为管理员
         if (user != null && user.getRole().equals(Constant.UserRole.USER)) {
             user.setStatus(Constant.UserStatus.FROZEN);
             return updateUser(user);
@@ -230,6 +249,7 @@ public class UserService {
      */
     public boolean activeUser(Integer userId) {
         User user = findUserByUserId(userId);
+        //判断当前用户身份是否为管理员
         if (user != null && user.getRole().equals(Constant.UserRole.USER)) {
             user.setStatus(Constant.UserStatus.ACTIVE);
             return updateUser(user);
@@ -238,45 +258,48 @@ public class UserService {
     }
 
     /**
-     * 充值
+     * 用户充值
      */
     public boolean recharge(BigDecimal money) {
-        if (MainView.currentUser != null && MainView.currentUser.getRole().equals(Constant.UserRole.USER)) {
-            User user = MainView.currentUser;
+        User user = UserService.currentUser;
+        //判断当前用户身份是否为普通用户
+        if (user != null && user.getRole().equals(Constant.UserRole.USER)) {
             //充值的金额是正数
-            if (money.equals(money.abs())) {
+            if (money.compareTo(BigDecimal.ZERO) > 0) {
                 user.setAccount(user.getAccount().add(money));
-                if (updateUser(user)) {
-                    return true;
-                }
+                return updateUser(user);
             }
         }
         return false;
     }
 
     /**
-     * 消费
+     * 用户消费
      */
     public boolean consume(BigDecimal money) {
-        if (MainView.currentUser != null && MainView.currentUser.getRole().equals(Constant.UserRole.USER)) {
-            User user = MainView.currentUser;
+        User user = UserService.currentUser;
+        //判断当前用户身份是否为普通用户
+        if (user != null && user.getRole().equals(Constant.UserRole.USER)) {
             //消费的金额是正数
             BigDecimal tempMoney = user.getAccount().subtract(money);
-            if (money.equals(money.abs()) && tempMoney.compareTo(BigDecimal.ZERO) > -1) {
+            if (money.compareTo(BigDecimal.ZERO) > 0 && tempMoney.compareTo(BigDecimal.ZERO) > -1) {
                 user.setAccount(tempMoney);
-                if (updateUser(user)) {
-                    return true;
-                }
+                return updateUser(user);
             }
         }
         return false;
     }
 
+    /**
+     * 获取用户列表
+     */
     public List<User> getUserList() {
-        User currentUser = MainView.currentUser;
+        User currentUser = UserService.currentUser;
         List<User> list = new ArrayList<>();
+        //判断当前用户身份是否为管理员
         if (currentUser != null && currentUser.getRole().equals(Constant.UserRole.ADMIN)) {
             for (User user : userList) {
+                //跳过管理员用户
                 if (user.getRole().equals(Constant.UserRole.ADMIN)) {
                     continue;
                 }

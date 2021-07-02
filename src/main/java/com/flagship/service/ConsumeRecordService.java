@@ -1,7 +1,7 @@
 package com.flagship.service;
 
-import com.flagship.MainView;
 import com.flagship.common.Constant;
+import com.flagship.exception.ExceptionEnum;
 import com.flagship.pojo.ConsumeRecord;
 import com.flagship.pojo.User;
 import com.flagship.util.DateUtils;
@@ -16,15 +16,28 @@ import java.util.Objects;
 /**
  * @Author Flagship
  * @Date 2021/7/1 9:10
- * @Description
+ * @Description 消费记录Service
  */
-public class ConsumeRecordService {
+public class ConsumeRecordService extends BaseService {
+    /**
+     * 消费记录列表
+     */
     private final List<ConsumeRecord> consumeRecords = new ArrayList<>();
+    /**
+     * 自增ID
+     */
     private Integer nextId = 1;
+    /**
+     * 数据文件
+     */
     private File file;
 
-    public void initRecords(boolean onlyCurrentUser) {
-        User user = MainView.currentUser;
+    /**
+     * 初始化
+     */
+    @Override
+    public void initData() {
+        User user = UserService.currentUser;
         if (user == null) {
             return;
         }
@@ -37,21 +50,31 @@ public class ConsumeRecordService {
                 //实现ID自增
                 ++nextId;
                 //解析消费数据并加入到集合中
-                String[] dataArr = reader.readLine().split("#");
+                String[] dataArr = reader.readLine().split(Constant.DELIMITER);
                 ConsumeRecord record = resolveStringArr(dataArr);
-                //是否只保存当前用户的消费记录
-                if (onlyCurrentUser) {
-                    if (user.getRole().equals(1) || !user.getId().equals(record.getUserId())) {
-                        continue;
-                    }
+                //如果是当前用户不是管理员，则只能获取自己的消费记录
+                if (user.getRole().equals(Constant.UserRole.USER) && !user.getId().equals(record.getUserId())) {
+                    continue;
                 }
+                //加入列表
                 consumeRecords.add(record);
             }
         } catch (IOException e) {
-            ExceptionUtils.recordException("消费数据初始化异常");
+            ExceptionUtils.recordException(ExceptionEnum.INIT_CONSUME_RECORD_ERR.getErrMsg());
         }
     }
 
+    /**
+     * 清空列表
+     */
+    @Override
+    public void clear() {
+        this.consumeRecords.clear();
+    }
+
+    /**
+     * 从字符串数组中解析出消费记录数据
+     */
     private ConsumeRecord resolveStringArr(String[] dataArr) {
         ConsumeRecord consumeRecord = new ConsumeRecord();
         consumeRecord.setRecordId(Integer.valueOf(dataArr[0]));
@@ -61,37 +84,48 @@ public class ConsumeRecordService {
         return consumeRecord;
     }
 
-    public boolean addRecord(BigDecimal money) {
-        User user = MainView.currentUser;
+    /**
+     * 增加一条消费记录
+     */
+    public void addRecord(BigDecimal money) {
+        User user = UserService.currentUser;
         //用户需要登录且金额为正整数
         if (user != null && money.compareTo(BigDecimal.ZERO) > 0) {
+            //构造消费记录
             ConsumeRecord consumeRecord = new ConsumeRecord();
             consumeRecord.setRecordId(nextId);
             consumeRecord.setUserId(user.getId());
             consumeRecord.setMoney(money);
             consumeRecord.setDate(DateUtils.getCurrentDateString());
-            //写入数据文件
+            //输出流
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
+                //写入数据文件
                 writer.write(resolveConsume(consumeRecord));
                 writer.newLine();
                 writer.flush();
                 //id自增
                 ++nextId;
+                //加入列表
                 consumeRecords.add(consumeRecord);
             } catch (Exception e) {
-                ExceptionUtils.recordException("新增消费数据保存异常");
+                ExceptionUtils.recordException(ExceptionEnum.ADD_CONSUME_RECORD_ERR.getErrMsg());
             }
         }
-        return false;
     }
 
+    /**
+     * 从消费记录对象构造出字符串
+     */
     private String resolveConsume(ConsumeRecord consumeRecord) {
-        return consumeRecord.getRecordId() + "#" +
-                consumeRecord.getUserId() + "#" +
-                consumeRecord.getMoney() + "#" +
+        return consumeRecord.getRecordId() + Constant.DELIMITER +
+                consumeRecord.getUserId() + Constant.DELIMITER +
+                consumeRecord.getMoney() + Constant.DELIMITER +
                 consumeRecord.getDate();
     }
 
+    /**
+     * 获取消费数据列表
+     */
     public List<ConsumeRecord> getConsumeRecords() {
         return consumeRecords;
     }

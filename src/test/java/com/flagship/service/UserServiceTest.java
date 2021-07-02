@@ -16,17 +16,9 @@ public class UserServiceTest {
 
     @Test
     public void freezeUser() {
-        UserService userService = new UserService();
-        userService.initUserList();
-        userService.freezeUser(3);
     }
 
     @Test
     public void getUserList() {
-        UserService userService = new UserService();
-        userService.initUserList();
-        userService.adminLogin("admin", "admin");
-        List<User> userList = userService.getUserList();
-        userList.forEach(System.out::println);
     }
 }

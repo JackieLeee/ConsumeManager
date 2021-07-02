@@ -2,7 +2,6 @@ package com.flagship.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.Setter;
 
 /**
  * @Author Flagship
@@ -13,11 +12,14 @@ import lombok.Setter;
 @Getter
 public enum ExceptionEnum {
     /**
-     *
+     * 错误说明
      */
-    SYSTEM_ERROR(10000, "系统异常"),
-    INPUT_ILLEGAL(10001, "输入不合法");
+    INIT_CONSUME_RECORD_ERR("初始化消费数据异常"),
+    ADD_CONSUME_RECORD_ERR("新增消费数据保存异常"),
+    INIT_RECHARGE_RECORD_ERR("初始化充值数据异常"),
+    ADD_RECHARGE_RECORD_ERR("新增充值数据保存异常"),
+    INIT_USER_ERR("初始化用户数据异常"),
+    ADD_USER_ERR("新增用户数据保存异常");
 
-    private final Integer errCode;
     private final String errMsg;
 }
