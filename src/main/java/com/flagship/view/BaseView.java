@@ -5,7 +5,7 @@ import java.util.Scanner;
 /**
  * @Author Flagship
  * @Date 2021/7/2 8:04
- * @Description 界面基类
+ * @Description 界面接口
  */
 public interface BaseView {
 

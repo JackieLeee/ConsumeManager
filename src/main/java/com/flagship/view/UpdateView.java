@@ -3,6 +3,7 @@ package com.flagship.view;
 import com.flagship.common.ServiceInstanceEnum;
 import com.flagship.service.UserService;
 import com.flagship.util.ExceptionUtils;
+import com.flagship.util.ValidatorUtils;
 
 import java.util.Scanner;
 
@@ -70,10 +71,14 @@ public class UpdateView implements BaseView {
     private void updateCurrentUserName(Scanner in) {
         System.out.print("请输入新用户名：");
         String userName = in.next();
-        if (userService.updateUserName(UserService.currentUser.getId(), userName)) {
-            System.out.println("修改成功！");
+        if (ValidatorUtils.validUserName(userName)) {
+            if (userService.updateUserName(UserService.currentUser.getId(), userName)) {
+                System.out.println("修改成功！");
+            } else {
+                System.out.println("修改失败！");
+            }
         } else {
-            System.out.println("修改失败！");
+            System.out.println("修改失败，用户名必须由4位到10位的数字或字母组成，不能包含特殊字符！");
         }
     }
 
@@ -83,10 +88,14 @@ public class UpdateView implements BaseView {
     private void updatePassword(Scanner in) {
         System.out.print("请输入新密码：");
         String newPassword = in.next();
-        if (userService.updatePassword(newPassword)) {
-            System.out.println("修改成功");
+        if (ValidatorUtils.validPassword(newPassword)) {
+            if (userService.updatePassword(newPassword)) {
+                System.out.println("修改成功");
+            } else {
+                System.out.println("修改失败");
+            }
         } else {
-            System.out.println("修改失败");
+            System.out.println("修改失败，密码必须由8位到16位的数字或字母组成，不能包含特殊字符！");
         }
     }
 }

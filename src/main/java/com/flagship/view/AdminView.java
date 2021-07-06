@@ -8,6 +8,7 @@ import com.flagship.service.ConsumeRecordService;
 import com.flagship.service.RechargeRecordService;
 import com.flagship.service.UserService;
 import com.flagship.util.ExceptionUtils;
+import com.flagship.util.ValidatorUtils;
 
 import java.util.List;
 import java.util.Scanner;
@@ -49,7 +50,7 @@ public class AdminView implements BaseView {
                         printAdminMessage();
                         break;
                     case 2:
-                        //用户注册
+                        //用户添加
                         userRegister(in);
                         printAdminMessage();
                         break;
@@ -120,7 +121,7 @@ public class AdminView implements BaseView {
         System.out.println("---4.冻结会员------------------------");
         System.out.println("---5.解冻会员------------------------");
         System.out.println("---6.查看用户列表---------------------");
-        System.out.println("---8.查看充值记录---------------------");
+        System.out.println("---7.查看充值记录---------------------");
         System.out.println("---8.查看消费记录---------------------");
         System.out.println("---9.退出登录------------------------");
         System.out.print("请选择你的操作：");
@@ -134,10 +135,16 @@ public class AdminView implements BaseView {
         String userName = in.next();
         System.out.print("请输入密码：");
         String password = in.next();
-        if (userService.register(userName, password)) {
-            System.out.println("创建成功！");
+        if (!ValidatorUtils.validUserName(userName)) {
+            System.out.println("创建失败，用户名必须由4位到10位的数字或字母组成，不能包含特殊字符！");
+        } else if (!ValidatorUtils.validPassword(password)) {
+            System.out.println("创建失败，密码必须由8位及以上的数字或字母组成，不能包含特殊字符！");
         } else {
-            System.out.println("创建失败，该用户名已存在！");
+            if (userService.register(userName, password)) {
+                System.out.println("创建成功！");
+            } else {
+                System.out.println("创建失败，该用户名已存在！");
+            }
         }
     }
 
@@ -147,10 +154,14 @@ public class AdminView implements BaseView {
     private void updatePassword(Scanner in) {
         System.out.print("请输入新密码：");
         String newPassword = in.next();
-        if (userService.updatePassword(newPassword)) {
-            System.out.println("修改成功");
+        if (ValidatorUtils.validPassword(newPassword)) {
+            if (userService.updatePassword(newPassword)) {
+                System.out.println("修改成功");
+            } else {
+                System.out.println("修改失败");
+            }
         } else {
-            System.out.println("修改失败");
+            System.out.println("修改失败，密码必须由8位到16位的数字或字母组成，不能包含特殊字符！");
         }
     }
 
@@ -162,10 +173,14 @@ public class AdminView implements BaseView {
         Integer userId = Integer.parseInt(in.next());
         System.out.print("请输入新用户名：");
         String userName = in.next();
-        if (userService.updateUserName(userId, userName)) {
-            System.out.println("修改成功！");
+        if (ValidatorUtils.validUserName(userName)) {
+            if (userService.updateUserName(userId, userName)) {
+                System.out.println("修改成功！");
+            } else {
+                System.out.println("修改失败");
+            }
         } else {
-            System.out.println("修改失败！");
+            System.out.println("修改失败，用户名必须由4位到10位的数字或字母组成，不能包含特殊字符！");
         }
     }
 

@@ -18,7 +18,7 @@ import java.util.Objects;
  * @Date 2021/7/1 9:10
  * @Description 消费记录Service
  */
-public class ConsumeRecordService extends BaseService {
+public class ConsumeRecordService implements BaseService {
     /**
      * 消费记录列表
      */

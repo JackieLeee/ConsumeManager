@@ -16,7 +16,7 @@ import java.util.Objects;
  * @Date 2021/7/1 9:09
  * @Description 用户Service类
  */
-public class UserService extends BaseService {
+public class UserService implements BaseService {
     /**
      * 当前用户
      */

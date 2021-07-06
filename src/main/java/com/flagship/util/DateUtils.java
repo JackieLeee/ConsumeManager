@@ -20,7 +20,14 @@ public class DateUtils {
      * 获取指定时间字符串
      */
     public static String getDateString(Date date) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        return getDateFormatString(date, "yyyy-MM-dd HH:mm:ss");
+    }
+
+    /**
+     * 获取指定时间指定格式的字符串
+     */
+    public static String getDateFormatString(Date date, String pattern) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(pattern);
         return dateFormat.format(date);
     }
 }

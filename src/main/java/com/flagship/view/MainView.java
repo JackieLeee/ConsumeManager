@@ -6,6 +6,7 @@ import com.flagship.service.ConsumeRecordService;
 import com.flagship.service.RechargeRecordService;
 import com.flagship.service.UserService;
 import com.flagship.util.ExceptionUtils;
+import com.flagship.util.ValidatorUtils;
 
 import java.util.Objects;
 import java.util.Scanner;
@@ -114,17 +115,27 @@ public class MainView implements BaseView {
         String newUserName = in.next();
         System.out.print("请输入密码：");
         String newPassword = in.next();
-        if (userService.register(newUserName, newPassword)) {
-            System.out.println("注册成功，正在进行自动登录...");
-            if (userService.userLogin(newUserName, newPassword)) {
-                //展示用户界面
-                showOtherView(in, "userView");
-            } else {
-                System.out.println("登录失败，用户名或密码错误");
-            }
-        } else {
-            System.out.println("注册失败！");
+
+        if (!ValidatorUtils.validUserName(newUserName)) {
+            System.out.println("注册失败，用户名必须由4位到10位的数字或字母组成，不能包含特殊字符！");
             printWelcomeMessage();
+        } else if (!ValidatorUtils.validPassword(newPassword)) {
+            System.out.println("注册失败，密码必须由8位及以上的数字或字母组成，不能包含特殊字符！");
+            printWelcomeMessage();
+        } else {
+            if (userService.register(newUserName, newPassword)) {
+                System.out.println("注册成功，正在进行自动登录...");
+                if (userService.userLogin(newUserName, newPassword)) {
+                    //展示用户界面
+                    showOtherView(in, "userView");
+                } else {
+                    System.out.println("登录失败，用户名或密码错误");
+                    printWelcomeMessage();
+                }
+            } else {
+                System.out.println("注册失败！");
+                printWelcomeMessage();
+            }
         }
     }
 
